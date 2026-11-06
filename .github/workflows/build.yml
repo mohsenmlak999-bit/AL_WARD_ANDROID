@@ -9,6 +9,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Unzip project
         run: |
           unzip -o AL_WARD_GitHub_Build.zip -d src
@@ -16,9 +20,11 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          sudo apt-get install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
           pip install --upgrade pip
           pip install buildozer cython==0.29.36
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
       - name: Build
         run: |
           set -o pipefail
@@ -27,11 +33,10 @@ jobs:
           sed -i '/^p4a\./d' buildozer.spec
           sed -i 's/^requirements = .*/requirements = hostpython3==3.10.12,python3==3.10.12,kivy==2.3.0,requests,urllib3,chardet,idna,certifi,charset-normalizer,arabic-reshaper,future,python-bidi==0.4.2,pillow,pyjnius,android,androidstorage4kivy/' buildozer.spec
           sed -i '/^\[app\]/a p4a.branch = v2024.01.21' buildozer.spec
-          grep -n "requirements\|p4a" buildozer.spec
-          buildozer -v android debug 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+          yes | buildozer -v android debug 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
       - name: Show error
         if: failure()
-        run: grep -n -i "error\|failed\|exception" build.log | tail -n 40
+        run: grep -n -B2 -A12 "What went wrong\|Caused by" build.log | tail -n 60
       - uses: actions/upload-artifact@v4
         with:
           name: alward-apk
