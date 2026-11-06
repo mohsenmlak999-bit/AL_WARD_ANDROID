@@ -10,41 +10,49 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract project
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk \
-            python3-pip python3-venv build-essential \
-            autoconf automake libtool pkg-config \
+          sudo apt-get install -y \
+            git zip unzip openjdk-17-jdk \
+            autoconf automake libtool libtool-bin pkg-config \
             zlib1g-dev libffi-dev libssl-dev
-          mkdir -p project
-          unzip -o AL_WARD_GitHub_Build.zip -d project
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Install Python tools
         run: |
-          python3 -m pip install --user --upgrade pip setuptools
-          python3 -m pip install --user buildozer==1.5.0 cython==0.29.34
+          python -m pip install --user --upgrade pip setuptools wheel
+          python -m pip install --user buildozer==1.5.0 Cython==0.29.34
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/.local/bin:$PATH"
-          cython --version
-          buildozer --version
+
+      - name: Extract AL WARD project
+        run: |
+          test -f AL_WARD_GitHub_Build.zip
+          mkdir -p project
+          unzip -o AL_WARD_GitHub_Build.zip -d project
+          SPEC="$(find project -name buildozer.spec -print -quit)"
+          test -n "$SPEC"
+          echo "PROJECT_DIR=$(dirname "$SPEC")" >> "$GITHUB_ENV"
 
       - name: Build Android APK
         run: |
-          PROJECT_DIR="$(dirname "$(find "$GITHUB_WORKSPACE/project" -name buildozer.spec -print -quit)")"
-          test -n "$PROJECT_DIR"
           cd "$PROJECT_DIR"
-          export PATH="$HOME/.local/bin:$PATH"
           buildozer -v android debug
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: AL-WARD-APK
-          path: project/**/bin/*.apk
+          path: ${{ env.PROJECT_DIR }}/bin/*.apk
           if-no-files-found: error
