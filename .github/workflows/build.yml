@@ -21,8 +21,10 @@ jobs:
           pip install buildozer cython==0.29.36
       - name: Build
         run: |
+          set -o pipefail
           SPEC=$(find src -name buildozer.spec | head -1)
           cd "$(dirname "$SPEC")"
+          sed -i '/^p4a\./d' buildozer.spec
           sed -i 's/^requirements = .*/requirements = hostpython3==3.10.12,python3==3.10.12,kivy==2.3.0,requests,urllib3,chardet,idna,certifi,charset-normalizer,arabic-reshaper,future,python-bidi==0.4.2,pillow,pyjnius,android,androidstorage4kivy/' buildozer.spec
           sed -i '/^\[app\]/a p4a.branch = v2024.01.21' buildozer.spec
           grep -n "requirements\|p4a" buildozer.spec
