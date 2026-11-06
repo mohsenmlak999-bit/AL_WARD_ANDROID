@@ -1,7 +1,11 @@
+
 name: Build AL WARD APK
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -13,36 +17,34 @@ jobs:
 
       - name: Extract project
         run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-17-jdk \
+            python3-pip python3-venv build-essential \
+            autoconf automake libtool pkg-config \
+            zlib1g-dev libffi-dev libssl-dev
           mkdir -p project
           unzip -o AL_WARD_GitHub_Build.zip -d project
 
-      - name: Install dependencies
+      - name: Install Python tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            git zip unzip openjdk-17-jdk \
-            python3-pip python3-venv python3-dev \
-            autoconf automake libtool pkg-config \
-            zlib1g-dev libffi-dev libssl-dev \
-            libsqlite3-dev libbz2-dev liblzma-dev \
-            libncurses5-dev libreadline-dev uuid-dev
-
-      - name: Setup Python
-        run: |
-          python3 -m venv .venv
-          .venv/bin/pip install --upgrade pip setuptools wheel
-          .venv/bin/pip install buildozer==1.5.0 cython==0.29.34
-          .venv/bin/cython --version
+          python3 -m pip install --user --upgrade pip setuptools
+          python3 -m pip install --user buildozer==1.5.0 cython==0.29.34
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          cython --version
+          buildozer --version
 
       - name: Build Android APK
         run: |
-          export PATH="$GITHUB_WORKSPACE/.venv/bin:$PATH"
-          cd project
-          ../.venv/bin/buildozer -v android debug
+          PROJECT_DIR="$(dirname "$(find "$GITHUB_WORKSPACE/project" -name buildozer.spec -print -quit)")"
+          test -n "$PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          export PATH="$HOME/.local/bin:$PATH"
+          buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AL-WARD-APK
-          path: project/bin/*.apk
+          path: project/**/bin/*.apk
           if-no-files-found: error
