@@ -11,17 +11,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check project archive
-        run: |
-          test -f AL_WARD_GitHub_Build.zip
-
-      - name: Extract AL WARD
+      - name: Extract project
         run: |
           mkdir -p project
           unzip -o AL_WARD_GitHub_Build.zip -d project
-          ls -la project
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -30,19 +25,18 @@ jobs:
             autoconf automake libtool pkg-config \
             zlib1g-dev libffi-dev libssl-dev \
             libsqlite3-dev libbz2-dev liblzma-dev \
-            libncurses5-dev libncursesw5-dev \
-            libreadline-dev uuid-dev
+            libncurses5-dev libreadline-dev uuid-dev
 
-      - name: Setup Python environment
+      - name: Setup Python
         run: |
           python3 -m venv .venv
-          .venv/bin/python -m pip install --upgrade pip setuptools wheel
-          .venv/bin/python -m pip install \
-            buildozer==1.5.0 \
-            cython==0.29.34
+          .venv/bin/pip install --upgrade pip setuptools wheel
+          .venv/bin/pip install buildozer==1.5.0 cython==0.29.34
+          .venv/bin/cython --version
 
       - name: Build Android APK
         run: |
+          export PATH="$GITHUB_WORKSPACE/.venv/bin:$PATH"
           cd project
           ../.venv/bin/buildozer -v android debug
 
