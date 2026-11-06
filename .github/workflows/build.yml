@@ -12,7 +12,7 @@ jobs:
       - name: Unzip project
         run: |
           unzip -o AL_WARD_GitHub_Build.zip -d src
-          find src -maxdepth 3 | head -30
+          find src -name buildozer.spec
       - name: Install deps
         run: |
           sudo apt-get update
@@ -22,9 +22,14 @@ jobs:
       - name: Build
         run: |
           SPEC=$(find src -name buildozer.spec | head -1)
-          echo "Using: $SPEC"
           cd "$(dirname "$SPEC")"
-          yes | buildozer -v android debug
+          sed -i 's/^requirements = .*/requirements = hostpython3==3.10.12,python3==3.10.12,kivy==2.3.0,requests,urllib3,chardet,idna,certifi,charset-normalizer,arabic-reshaper,future,python-bidi==0.4.2,pillow,pyjnius,android,androidstorage4kivy/' buildozer.spec
+          sed -i '/^\[app\]/a p4a.branch = v2024.01.21' buildozer.spec
+          grep -n "requirements\|p4a" buildozer.spec
+          buildozer -v android debug 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+      - name: Show error
+        if: failure()
+        run: grep -n -i "error\|failed\|exception" build.log | tail -n 40
       - uses: actions/upload-artifact@v4
         with:
           name: alward-apk
